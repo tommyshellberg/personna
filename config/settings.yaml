@@ -1,0 +1,31 @@
+# Reddit User Research CLI Configuration
+
+reddit:
+  # Reddit API credentials (set via environment variables)
+  # REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT
+  rate_limit_seconds: 5
+  max_comments_per_user: 100
+
+ollama:
+  # Ollama configuration
+  base_url: "http://localhost:11434"
+  model: "qwen3:8b" # Default model, can be overridden
+  temperature: 0.3
+
+qdrant:
+  # Qdrant vector database configuration
+  host: "localhost"
+  port: 6333
+  collection_name: "reddit_comments"
+
+output:
+  # Output configuration
+  format: "markdown"
+  include_metadata: true
+
+analysis:
+  # Analysis configuration
+  min_comment_length: 10 # Skip very short comments
+  archetype_analysis: true
+  engagement_analysis: true
+  subreddit_analysis: true
