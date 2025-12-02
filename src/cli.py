@@ -11,6 +11,7 @@ from .reddit_client import RedditClient
 from .persona_generator import PersonaGenerator
 from .vector_store import VectorStore
 from .markdown_parser import parse_comments_file, parse_persona_file
+from .sentiment_analyzer import SentimentAnalyzer
 
 console = Console()
 load_dotenv()
@@ -441,6 +442,120 @@ Answer:"""
 
     console.print("[bold green]Answer:[/bold green]")
     console.print(answer)
+
+
+@cli.command()
+@click.argument('post_url')
+@click.option('--output', '-o', default=None, type=click.Path(path_type=Path),
+              help='Output file for usernames (default: data/input/post_<id>_interested.txt)')
+@click.option('--threshold', '-t', default=0.3, type=float,
+              help='Minimum sentiment score to include (-1 to 1)')
+@click.option('--min-score', default=1, type=int,
+              help='Minimum Reddit score to consider')
+@click.option('--batch-size', default=20, type=int,
+              help='Comments per Ollama call')
+@click.option('--config', '-c', default='config/settings.yaml',
+              type=click.Path(path_type=Path), help='Configuration file path')
+def interest(post_url, output, threshold, min_score, batch_size, config):
+    """Find interested users from a Reddit post via sentiment analysis.
+
+    Analyzes top-level comments on the given Reddit post URL, runs sentiment
+    analysis via Ollama, and outputs a list of usernames who show positive
+    sentiment above the threshold.
+
+    The output file is compatible with the 'fetch' command for further analysis.
+    """
+    # Load configuration
+    with open(config, 'r') as f:
+        settings = yaml.safe_load(f)
+
+    # Override batch_size if provided
+    if 'sentiment' not in settings:
+        settings['sentiment'] = {}
+    settings['sentiment']['batch_size'] = batch_size
+
+    console.print(f"[bold blue]Analyzing post:[/bold blue] {post_url}")
+
+    # Initialize Reddit client
+    reddit_client = RedditClient(settings.get('reddit', {}))
+
+    # Fetch submission info
+    try:
+        submission = reddit_client.get_submission(post_url)
+        console.print(f"[green]Post:[/green] {submission['title'][:80]}...")
+        console.print(f"[dim]Subreddit: r/{submission['subreddit']} | Score: {submission['score']}[/dim]")
+    except Exception as e:
+        raise click.ClickException(f"Failed to fetch post: {e}")
+
+    # Fetch top-level comments
+    try:
+        comments = reddit_client.get_top_level_comments(post_url)
+        console.print(f"[green]Found {len(comments)} top-level comments[/green]")
+    except Exception as e:
+        raise click.ClickException(f"Failed to fetch comments: {e}")
+
+    if not comments:
+        console.print("[yellow]No comments found on this post.[/yellow]")
+        return
+
+    # Filter by minimum Reddit score
+    if min_score > 0:
+        original_count = len(comments)
+        comments = [c for c in comments if c['score'] >= min_score]
+        filtered_count = original_count - len(comments)
+        if filtered_count > 0:
+            console.print(f"[dim]Filtered out {filtered_count} comments below score {min_score}[/dim]")
+
+    if not comments:
+        console.print("[yellow]No comments remaining after score filter.[/yellow]")
+        return
+
+    # Initialize sentiment analyzer
+    analyzer = SentimentAnalyzer(settings)
+
+    # Analyze sentiment
+    console.print("[dim]Analyzing sentiment...[/dim]")
+    with Progress() as progress:
+        task = progress.add_task("Analyzing...", total=len(comments))
+
+        results = analyzer.analyze_all(
+            comments=comments,
+            post_title=submission['title'],
+            post_body=submission.get('selftext', '')
+        )
+
+        progress.update(task, completed=len(comments))
+
+    # Filter by sentiment threshold
+    interested_users = []
+    for result in results:
+        if result.score >= threshold:
+            interested_users.append(result.username)
+            console.print(f"  [green]✓[/green] u/{result.username} (score: {result.score:.2f}) - {result.rationale}")
+
+    # Deduplicate (user might have multiple qualifying comments)
+    interested_users = list(dict.fromkeys(interested_users))
+
+    console.print(f"\n[bold]Found {len(interested_users)} interested users from {len(comments)} comments[/bold]")
+
+    if not interested_users:
+        console.print("[yellow]No users met the sentiment threshold.[/yellow]")
+        return
+
+    # Determine output path
+    if output is None:
+        output = Path('data/input') / f"post_{submission['id']}_interested.txt"
+
+    # Ensure output directory exists
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write usernames to file
+    with open(output, 'w', encoding='utf-8') as f:
+        for username in interested_users:
+            f.write(f"{username}\n")
+
+    console.print(f"[bold green]Saved {len(interested_users)} usernames to {output}[/bold green]")
+    console.print(f"[dim]Run 'python main.py fetch {output}' to fetch their comments[/dim]")
 
 
 def parse_usernames(userfile: Path) -> list[str]:

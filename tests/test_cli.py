@@ -152,3 +152,158 @@ class TestAskCommand:
 
         # Should fail or show usage without question
         assert result.exit_code != 0 or "question" in result.output.lower()
+
+
+class TestInterestCommand:
+    """Tests for the interest CLI command."""
+
+    @pytest.fixture
+    def mock_config_with_sentiment(self, tmp_path):
+        """Create a config file with sentiment settings."""
+        config_content = """
+reddit:
+  rate_limit_seconds: 5
+  max_comments_per_user: 100
+
+ollama:
+  base_url: "http://localhost:11434"
+  model: "qwen3:8b"
+  temperature: 0
+
+sentiment:
+  batch_size: 20
+  threshold: 0.3
+"""
+        config_path = tmp_path / "settings.yaml"
+        config_path.write_text(config_content)
+        return config_path
+
+    def test_interest_command_exists(self, runner):
+        """interest command should be available."""
+        from src.cli import cli
+
+        result = runner.invoke(cli, ["interest", "--help"])
+        assert result.exit_code == 0
+        assert "interest" in result.output.lower() or "Find" in result.output
+
+    def test_interest_requires_post_url(self, runner, mock_config_with_sentiment):
+        """interest should require a post_url argument."""
+        from src.cli import cli
+
+        result = runner.invoke(cli, ["interest", "--config", str(mock_config_with_sentiment)])
+
+        # Should fail without URL
+        assert result.exit_code != 0
+
+    def test_interest_writes_usernames_to_output(self, runner, mock_config_with_sentiment, tmp_path):
+        """interest command writes interested usernames to output file."""
+        from src.cli import cli
+        import json
+
+        output_file = tmp_path / "interested.txt"
+
+        # Mock Reddit client
+        mock_submission = {
+            'id': 'abc123',
+            'title': 'Test Post',
+            'selftext': 'Test body',
+            'subreddit': 'test',
+            'score': 100,
+            'url': 'https://reddit.com/r/test/comments/abc123/title'
+        }
+
+        mock_comments = [
+            {'id': 'c1', 'author': 'fan_user', 'body': 'This is amazing!', 'score': 10, 'created_utc': 1700000000, 'permalink': '/r/test/...'},
+            {'id': 'c2', 'author': 'neutral_user', 'body': 'Interesting', 'score': 5, 'created_utc': 1700001000, 'permalink': '/r/test/...'},
+            {'id': 'c3', 'author': 'critic_user', 'body': 'Not impressed', 'score': 2, 'created_utc': 1700002000, 'permalink': '/r/test/...'},
+        ]
+
+        # Mock sentiment results - only fan_user is above threshold
+        mock_sentiment_response = {
+            "response": json.dumps([
+                {"id": "c1", "score": 0.8, "rationale": "Very positive"},
+                {"id": "c2", "score": 0.1, "rationale": "Neutral"},
+                {"id": "c3", "score": -0.5, "rationale": "Negative"},
+            ])
+        }
+
+        with patch("src.cli.RedditClient") as mock_rc, \
+             patch("src.cli.SentimentAnalyzer") as mock_sa:
+
+            # Setup Reddit mock
+            mock_reddit = MagicMock()
+            mock_reddit.get_submission.return_value = mock_submission
+            mock_reddit.get_top_level_comments.return_value = mock_comments
+            mock_rc.return_value = mock_reddit
+
+            # Setup Sentiment mock
+            from src.sentiment_analyzer import SentimentResult
+            mock_analyzer = MagicMock()
+            mock_analyzer.analyze_all.return_value = [
+                SentimentResult(comment_id='c1', username='fan_user', score=0.8, rationale='Very positive'),
+                SentimentResult(comment_id='c2', username='neutral_user', score=0.1, rationale='Neutral'),
+                SentimentResult(comment_id='c3', username='critic_user', score=-0.5, rationale='Negative'),
+            ]
+            mock_sa.return_value = mock_analyzer
+
+            result = runner.invoke(cli, [
+                "interest",
+                "https://reddit.com/r/test/comments/abc123/title",
+                "--config", str(mock_config_with_sentiment),
+                "--output", str(output_file),
+                "--threshold", "0.3"
+            ])
+
+            assert result.exit_code == 0
+
+            # Verify output file
+            assert output_file.exists()
+            usernames = output_file.read_text().strip().split('\n')
+            assert 'fan_user' in usernames
+            assert 'neutral_user' not in usernames  # Below threshold
+            assert 'critic_user' not in usernames  # Negative
+
+    def test_interest_filters_by_min_score(self, runner, mock_config_with_sentiment, tmp_path):
+        """interest should filter comments by minimum Reddit score."""
+        from src.cli import cli
+        import json
+
+        output_file = tmp_path / "interested.txt"
+
+        mock_submission = {'id': 'abc123', 'title': 'Test', 'selftext': '', 'subreddit': 'test', 'score': 100, 'url': 'https://reddit.com/...'}
+
+        # One comment has low Reddit score
+        mock_comments = [
+            {'id': 'c1', 'author': 'user1', 'body': 'Great!', 'score': 10, 'created_utc': 1700000000, 'permalink': '/...'},
+            {'id': 'c2', 'author': 'user2', 'body': 'Also great!', 'score': 0, 'created_utc': 1700001000, 'permalink': '/...'},  # Low score
+        ]
+
+        with patch("src.cli.RedditClient") as mock_rc, \
+             patch("src.cli.SentimentAnalyzer") as mock_sa:
+
+            mock_reddit = MagicMock()
+            mock_reddit.get_submission.return_value = mock_submission
+            mock_reddit.get_top_level_comments.return_value = mock_comments
+            mock_rc.return_value = mock_reddit
+
+            from src.sentiment_analyzer import SentimentResult
+            mock_analyzer = MagicMock()
+            # Only called with user1 (user2 filtered out by min-score)
+            mock_analyzer.analyze_all.return_value = [
+                SentimentResult(comment_id='c1', username='user1', score=0.8, rationale='Positive'),
+            ]
+            mock_sa.return_value = mock_analyzer
+
+            result = runner.invoke(cli, [
+                "interest",
+                "https://reddit.com/...",
+                "--config", str(mock_config_with_sentiment),
+                "--output", str(output_file),
+                "--min-score", "1"  # Filter out score=0
+            ])
+
+            # Verify analyzer was only called with filtered comments
+            call_args = mock_analyzer.analyze_all.call_args
+            comments_passed = call_args[1]['comments'] if call_args[1] else call_args[0][0]
+            assert len(comments_passed) == 1
+            assert comments_passed[0]['author'] == 'user1'

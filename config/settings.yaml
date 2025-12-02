@@ -37,3 +37,9 @@ analysis:
   archetype_analysis: true
   engagement_analysis: true
   subreddit_analysis: true
+
+sentiment:
+  # Sentiment analysis configuration for 'interest' command
+  batch_size: 20          # Comments per Ollama call
+  threshold: 0.3          # Default minimum score for "interested"
+  min_reddit_score: 1     # Filter downvoted comments

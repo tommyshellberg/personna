@@ -1,0 +1,7 @@
+# Development dependencies for contributors
+# Install with: pip install -r requirements.txt -r requirements-dev.txt
+
+# LLM Evaluation (Langsmith)
+# Used for testing sentiment analysis accuracy
+# See tests/evals/README.md for usage
+langsmith>=0.2.0

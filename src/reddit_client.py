@@ -1,5 +1,6 @@
 import praw
 import os
+import re
 from typing import List, Dict, Any
 from datetime import datetime
 from pathlib import Path
@@ -71,3 +72,102 @@ class RedditClient:
                     f.write(f"**Link:** [View on Reddit]({comment['permalink']})\n\n")
                     f.write(f"{comment['body']}\n\n")
                     f.write("---\n\n")
+
+    def _parse_submission_id(self, url: str) -> str:
+        """Extract submission ID from various Reddit URL formats.
+
+        Supported formats:
+        - https://www.reddit.com/r/subreddit/comments/abc123/title/
+        - https://reddit.com/r/subreddit/comments/abc123/title
+        - https://old.reddit.com/r/subreddit/comments/abc123/title
+        - https://redd.it/abc123
+
+        Args:
+            url: Full Reddit post URL
+
+        Returns:
+            Submission ID string
+
+        Raises:
+            ValueError: If URL format is not recognized
+        """
+        # Pattern for standard Reddit URLs: /comments/SUBMISSION_ID/
+        standard_pattern = r'/comments/([a-zA-Z0-9]+)'
+        match = re.search(standard_pattern, url)
+        if match:
+            return match.group(1)
+
+        # Pattern for short redd.it URLs: redd.it/SUBMISSION_ID
+        short_pattern = r'redd\.it/([a-zA-Z0-9]+)'
+        match = re.search(short_pattern, url)
+        if match:
+            return match.group(1)
+
+        raise ValueError(f"Could not parse submission ID from URL: {url}")
+
+    def get_submission(self, post_url: str) -> Dict[str, Any]:
+        """Fetch post metadata from URL.
+
+        Args:
+            post_url: Full Reddit post URL
+
+        Returns:
+            Dictionary with submission metadata:
+                - id: Submission ID
+                - title: Post title
+                - selftext: Post body text
+                - subreddit: Subreddit name
+                - score: Reddit score
+                - url: Original URL
+        """
+        submission_id = self._parse_submission_id(post_url)
+        submission = self.reddit.submission(id=submission_id)
+
+        return {
+            'id': submission.id,
+            'title': submission.title,
+            'selftext': submission.selftext,
+            'subreddit': str(submission.subreddit),
+            'score': submission.score,
+            'url': post_url
+        }
+
+    def get_top_level_comments(self, post_url: str) -> List[Dict[str, Any]]:
+        """Fetch top-level comments only (no nested replies).
+
+        Args:
+            post_url: Full Reddit post URL
+
+        Returns:
+            List of comment dictionaries with:
+                - id: Comment ID
+                - author: Username or '[deleted]'
+                - body: Comment text
+                - score: Reddit score
+                - created_utc: Unix timestamp
+                - permalink: Full Reddit URL
+        """
+        submission_id = self._parse_submission_id(post_url)
+        submission = self.reddit.submission(id=submission_id)
+
+        # Skip "load more comments" links - just get top-level
+        submission.comments.replace_more(limit=0)
+
+        comments = []
+        for comment in submission.comments:
+            # Skip MoreComments objects that might slip through
+            if not hasattr(comment, 'body'):
+                continue
+
+            author = str(comment.author) if comment.author else '[deleted]'
+
+            comments.append({
+                'id': comment.id,
+                'author': author,
+                'body': comment.body,
+                'score': comment.score,
+                'created_utc': comment.created_utc,
+                'permalink': f"https://reddit.com{comment.permalink}"
+            })
+
+        return comments

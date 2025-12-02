@@ -1,0 +1,186 @@
+{
+  "description": "Sentiment analysis test cases for Reddit comment classification",
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "positive_enthusiastic",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app. It syncs across devices and has streak tracking.",
+      "comment": "This is exactly what I've been looking for! Just downloaded it. The UI is beautiful.",
+      "expected_sentiment": "positive",
+      "expected_score_min": 0.5,
+      "expected_score_max": 1.0
+    },
+    {
+      "id": "positive_supportive",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app.",
+      "comment": "Congrats on launching! I know how much work goes into these projects. Will definitely try it.",
+      "expected_sentiment": "positive",
+      "expected_score_min": 0.4,
+      "expected_score_max": 1.0
+    },
+    {
+      "id": "positive_constructive",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app.",
+      "comment": "Love the concept! Would be great if you added calendar integration. Happy to be a beta tester.",
+      "expected_sentiment": "positive",
+      "expected_score_min": 0.3,
+      "expected_score_max": 0.9
+    },
+    {
+      "id": "neutral_question",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app.",
+      "comment": "Interesting. What tech stack did you use to build this?",
+      "expected_sentiment": "neutral",
+      "expected_score_min": -0.2,
+      "expected_score_max": 0.3
+    },
+    {
+      "id": "neutral_factual",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app.",
+      "comment": "Is this available on Android or just iOS?",
+      "expected_sentiment": "neutral",
+      "expected_score_min": -0.2,
+      "expected_score_max": 0.3
+    },
+    {
+      "id": "neutral_comparison",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app.",
+      "comment": "How does this compare to Habitica or Streaks?",
+      "expected_sentiment": "neutral",
+      "expected_score_min": -0.3,
+      "expected_score_max": 0.3
+    },
+    {
+      "id": "negative_dismissive",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app.",
+      "comment": "Another habit tracker? There are already like 50 of these on the app store.",
+      "expected_sentiment": "negative",
+      "expected_score_min": -1.0,
+      "expected_score_max": -0.2
+    },
+    {
+      "id": "negative_critical",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app.",
+      "comment": "The UI looks dated. Also, why does it need so many permissions? Hard pass.",
+      "expected_sentiment": "negative",
+      "expected_score_min": -1.0,
+      "expected_score_max": -0.3
+    },
+    {
+      "id": "negative_sarcastic",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app.",
+      "comment": "Wow, another habit tracker! How original! /s",
+      "expected_sentiment": "negative",
+      "expected_score_min": -1.0,
+      "expected_score_max": -0.2
+    },
+    {
+      "id": "negative_complaint",
+      "post_title": "I built an app that tracks your daily habits",
+      "post_body": "After months of work, I'm launching my habit tracking app.",
+      "comment": "I tried it and it crashes every time I try to add a new habit. Uninstalled.",
+      "expected_sentiment": "negative",
+      "expected_score_min": -1.0,
+      "expected_score_max": -0.4
+    },
+    {
+      "id": "positive_personal_story",
+      "post_title": "I built a budgeting tool for freelancers",
+      "post_body": "As a freelancer myself, I got frustrated with existing tools and built my own.",
+      "comment": "As a fellow freelancer, I feel this so hard. Tax season is always a nightmare. Signing up now!",
+      "expected_sentiment": "positive",
+      "expected_score_min": 0.4,
+      "expected_score_max": 1.0
+    },
+    {
+      "id": "positive_gratitude",
+      "post_title": "Free tool I made to help with job searching",
+      "post_body": "I was laid off last year and built this to help with my own job search. Sharing it free.",
+      "comment": "You're a legend for making this free. This would have saved me so much time last month!",
+      "expected_sentiment": "positive",
+      "expected_score_min": 0.6,
+      "expected_score_max": 1.0
+    },
+    {
+      "id": "neutral_skeptical",
+      "post_title": "AI-powered writing assistant I created",
+      "post_body": "Uses GPT-4 to help with writing emails and documents.",
+      "comment": "Does this actually work well or is it just another ChatGPT wrapper?",
+      "expected_sentiment": "neutral",
+      "expected_score_min": -0.3,
+      "expected_score_max": 0.2
+    },
+    {
+      "id": "negative_privacy_concern",
+      "post_title": "I built a personal finance tracker",
+      "post_body": "Connect your bank accounts and get insights into your spending.",
+      "comment": "So you want access to all my bank data? No thanks. This screams data breach waiting to happen.",
+      "expected_sentiment": "negative",
+      "expected_score_min": -1.0,
+      "expected_score_max": -0.4
+    },
+    {
+      "id": "positive_early_adopter",
+      "post_title": "Beta testing my new productivity app",
+      "post_body": "Looking for early users to test and provide feedback.",
+      "comment": "Count me in! I love trying new productivity tools. Just signed up for the beta.",
+      "expected_sentiment": "positive",
+      "expected_score_min": 0.5,
+      "expected_score_max": 1.0
+    },
+    {
+      "id": "neutral_technical",
+      "post_title": "Open source alternative to Notion I built",
+      "post_body": "Self-hostable and privacy-focused note-taking app.",
+      "comment": "What database does it use under the hood? SQLite or PostgreSQL?",
+      "expected_sentiment": "neutral",
+      "expected_score_min": -0.1,
+      "expected_score_max": 0.3
+    },
+    {
+      "id": "positive_mild",
+      "post_title": "Simple timer app for focus sessions",
+      "post_body": "No frills pomodoro timer with nice sounds.",
+      "comment": "Looks clean. Might give it a try.",
+      "expected_sentiment": "positive",
+      "expected_score_min": 0.1,
+      "expected_score_max": 0.5
+    },
+    {
+      "id": "negative_unimpressed",
+      "post_title": "I made a to-do list app",
+      "post_body": "Simple and minimal task management.",
+      "comment": "This offers nothing that Apple Reminders doesn't already do for free.",
+      "expected_sentiment": "negative",
+      "expected_score_min": -0.8,
+      "expected_score_max": -0.2
+    },
+    {
+      "id": "positive_sharing",
+      "post_title": "Chrome extension for saving articles",
+      "post_body": "One-click save articles to read later.",
+      "comment": "Just shared this with my whole team. We've been looking for something exactly like this!",
+      "expected_sentiment": "positive",
+      "expected_score_min": 0.6,
+      "expected_score_max": 1.0
+    },
+    {
+      "id": "neutral_feature_request",
+      "post_title": "Task management app with AI prioritization",
+      "post_body": "Uses AI to help prioritize your daily tasks.",
+      "comment": "Does it integrate with Google Calendar? That would be essential for my workflow.",
+      "expected_sentiment": "neutral",
+      "expected_score_min": -0.1,
+      "expected_score_max": 0.4
+    }
+  ]
+}
