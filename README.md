@@ -10,6 +10,7 @@ A Python CLI tool for analyzing Reddit users to understand their personas, inter
 - **Engagement Insights**: Get recommendations for how to reach similar users
 - **RAG-Powered Q&A**: Ask questions about your audience with AI-synthesized answers
 - **Semantic Search**: Find similar comments and personas using vector embeddings
+- **Interest Discovery**: Find engaged users from any Reddit post via sentiment analysis
 - **Rate Limit Handling**: Respects Reddit API limits automatically
 - **Resume Support**: Skip already processed users
 
@@ -205,6 +206,54 @@ This suggests your audience values authentic discussion of challenges paired
 with actionable strategies.
 ```
 
+### Interest Discovery (Find Engaged Users)
+
+Find users who are positively engaged with a topic by analyzing comments on any Reddit post:
+
+```bash
+# Analyze a Reddit post and extract interested users
+python main.py interest "https://reddit.com/r/Python/comments/abc123/my_new_tool"
+
+# Adjust sentiment threshold (default: 0.3, range: -1 to 1)
+python main.py interest "https://reddit.com/r/..." --threshold 0.5
+
+# Filter by minimum Reddit score
+python main.py interest "https://reddit.com/r/..." --min-score 5
+
+# Custom output file
+python main.py interest "https://reddit.com/r/..." --output my_users.txt
+```
+
+Example output:
+```
+Analyzing post: https://reddit.com/r/Python/comments/abc123/my_new_tool
+Post: I built a CLI tool for Reddit analysis...
+Subreddit: r/Python | Score: 342
+
+Found 47 top-level comments
+Filtered out 12 comments below score 1
+Analyzing sentiment...
+
+  ✓ u/pythondev42 (score: 0.85) - Enthusiastic endorsement
+  ✓ u/datascientist (score: 0.72) - Genuine interest with questions
+  ✓ u/toolbuilder (score: 0.68) - Positive comparison to alternatives
+
+Found 23 interested users from 35 comments
+Saved 23 usernames to data/input/post_abc123_interested.txt
+Run 'python main.py fetch data/input/post_abc123_interested.txt' to fetch their comments
+```
+
+The output file is compatible with the `fetch` command, enabling a complete workflow:
+
+```bash
+# Complete interest-to-persona pipeline
+python main.py interest "https://reddit.com/r/Python/comments/abc123/..."
+python main.py fetch data/input/post_abc123_interested.txt
+python main.py personas
+python main.py embed
+python main.py ask "What do these users care about?"
+```
+
 ### Command Options
 
 ```bash
@@ -363,12 +412,13 @@ python scripts/test_persona.py
 ```
 reddit-user-research/
 ├── src/                      # Main application code
-│   ├── cli.py               # Command-line interface (5 commands)
+│   ├── cli.py               # Command-line interface (6 commands)
 │   ├── reddit_client.py     # Reddit API wrapper
 │   ├── persona_generator.py # LLM persona generation
+│   ├── sentiment_analyzer.py # Comment sentiment analysis
 │   ├── vector_store.py      # Qdrant vector operations
 │   └── markdown_parser.py   # Parse comment/persona files
-├── tests/                   # Test suite (42 tests)
+├── tests/                   # Test suite (77 tests)
 │   ├── conftest.py          # Shared fixtures
 │   ├── test_vector_store.py # VectorStore unit tests
 │   ├── test_vector_store_integration.py
@@ -390,8 +440,8 @@ reddit-user-research/
 
 - [x] **Vector Storage**: Qdrant for semantic search across comments and personas
 - [x] **RAG Q&A**: Ask questions with AI-synthesized answers
-- [ ] **Version 2**: Parse Reddit post URLs to auto-extract commenters
-- [ ] **Sentiment Analysis**: Analyze comment sentiment patterns
+- [x] **Interest Discovery**: Parse Reddit post URLs to find engaged commenters
+- [x] **Sentiment Analysis**: Analyze comment sentiment toward posts
 - [ ] **Batch Reports**: Generate aggregate insights across all users
 - [ ] **User Clustering**: Auto-group users by interests and behavior
 
